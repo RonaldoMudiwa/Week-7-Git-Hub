@@ -10,8 +10,9 @@ processing (NLP) and a first machine learning model.
 
 ## Status
 
-Day 1 of 7. The complaint model, reading complaint files, and cleaning text
-into words.
+Day 2 of 7. The complaint model, reading complaint files, cleaning text
+into words, word statistics, and a simple keyword classifier with a fair
+way to mark it.
 
 ## The idea
 
@@ -108,10 +109,81 @@ ngrams(["late", "fee", "charged"], 2)
 - **N-grams** are words that sit next to each other. "late fee" says much
   more than "late" and "fee" on their own.
 
+## Word statistics
+
+```python
+from complaints import WordStats, counts_by, top_issues
+
+stats = WordStats()
+stats.top_words(complaints, 5)            # [('account', 101), ('money', 100), ...]
+stats.top_phrases(complaints, 2, 3)       # [('past weeks', 57), ('last month', 48), ...]
+counts_by(complaints)                     # [('Debt collection', 62), ('Credit reporting', 61), ...]
+top_issues(complaints, "Mortgage")        # the most common mortgage problems
+stats.distinctive_words(complaints, "Money transfer", 3)
+# [('transfer', 180.74), ('wire', 82.16), ('fraud', 60.25)]
+```
+
+**Distinctive words** are the ones used a lot in one kind of complaint but
+hardly anywhere else. "account" is the most common word overall, but it
+turns up everywhere, so it's no help for telling complaints apart.
+"escrow" only turns up in mortgage complaints, so it's a great clue.
+
+The score is how many times more often a word is used inside a group than
+outside it. 1 is added to every count first, so a word never seen outside
+the group gets a big score instead of a divide by zero error. This trick
+is called smoothing.
+
+## The keyword classifier
+
+A **classifier** is a program that sorts things into groups. This one
+guesses a complaint's product.
+
+```python
+from complaints import KeywordClassifier, evaluate, train_test_split
+
+train, test = train_test_split(complaints, test_share=0.2)
+classifier = KeywordClassifier().fit(train)
+
+classifier.predict("The debt collector keeps calling me at night")
+# Prediction(label='Debt collection', confidence=1.0)
+
+result = evaluate(classifier, test)
+result.accuracy            # 0.915 on the made up sample
+result.per_label           # {'Mortgage': (6, 9), ...} right, out of
+```
+
+- **How it works.** For each product it learns its 15 most distinctive
+  words, like a post room worker with a cheat sheet. To sort a new
+  complaint, it adds up the scores of the clue words it finds, and the
+  product with the most wins. `confidence` is that product's share of the
+  total score.
+- **No clues at all?** It guesses the most common product, with a
+  confidence of 0, so you can tell it was only a guess.
+- **`Classifier` is abstract.** On Day 4 a machine learning classifier
+  will plug into the same place, and `evaluate` will mark both the same
+  way. Starting with something simple matters: if the clever version can't
+  beat it, the clever version isn't worth having.
+
+### Marking it fairly
+
+You can't mark a student on the exact questions they revised from, or
+they'd get full marks just by remembering. So `train_test_split` keeps
+20% of the complaints back. The classifier learns from the other 80% and
+is marked only on complaints it has never seen.
+
+- **Stratified.** Each product is split separately, so a rare product
+  can't end up only on one side by bad luck.
+- **Seeded.** The shuffle is the same every run, so a change to the code
+  can be compared fairly with the run before.
+- On the made up sample it gets **91.5%** right. Real complaints are
+  messier, so expect less on real data. Mortgages are its weakest product
+  (6 out of 9), because the sample's mortgage complaints share fewer
+  special words.
+
 ## Tests
 
 ```bash
-pytest          # 39 tests
+pytest          # 64 tests
 pytest --cov    # with a coverage report, fails below 95%
 ```
 
