@@ -10,11 +10,23 @@ from .classifier import Classifier, KeywordClassifier, NotTrainedError, Predicti
 from .evaluation import Evaluation, evaluate, train_test_split
 from .exceptions import ComplaintError, DataError, ValidationError
 from .models import Complaint
+from .sentiment import LEXICON, LexiconSentimentScorer, Mood, Sentiment, SentimentScorer
 from .sources import ComplaintSource, CsvComplaintSource, ListSource, LoadReport, parse_date
 from .stats import WordStats, counts_by, top_issues
 from .text import STOP_WORDS, TextCleaner, ngrams
+from .urgency import (
+    FraudRule,
+    HarassmentRule,
+    LockedOutRule,
+    PhraseRule,
+    RepeatContactRule,
+    Urgency,
+    UrgencyAssessor,
+    UrgencyRule,
+    default_rules,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "Complaint",
@@ -36,6 +48,20 @@ __all__ = [
     "train_test_split",
     "evaluate",
     "Evaluation",
+    "SentimentScorer",
+    "LexiconSentimentScorer",
+    "Sentiment",
+    "Mood",
+    "LEXICON",
+    "UrgencyRule",
+    "PhraseRule",
+    "FraudRule",
+    "LockedOutRule",
+    "HarassmentRule",
+    "RepeatContactRule",
+    "default_rules",
+    "UrgencyAssessor",
+    "Urgency",
     "ComplaintError",
     "DataError",
     "ValidationError",

@@ -10,9 +10,9 @@ processing (NLP) and a first machine learning model.
 
 ## Status
 
-Day 2 of 7. The complaint model, reading complaint files, cleaning text
-into words, word statistics, and a simple keyword classifier with a fair
-way to mark it.
+Day 3 of 7. The complaint model, reading complaint files, cleaning text
+into words, word statistics, a simple keyword classifier with a fair way to
+mark it, a mood score and urgency rules.
 
 ## The idea
 
@@ -180,10 +180,72 @@ is marked only on complaints it has never seen.
   (6 out of 9), because the sample's mortgage complaints share fewer
   special words.
 
+## How upset is the customer?
+
+```python
+from complaints import LexiconSentimentScorer
+
+scorer = LexiconSentimentScorer()
+scorer.score("This is a scam and totally unacceptable. The staff were rude.")
+# Sentiment(score=-0.792, words=('scam', 'unacceptable', 'rude'))  mood: angry
+scorer.score("I am not happy").mood       # unhappy
+```
+
+This is called **sentiment analysis**. It uses a **lexicon**: a word list
+where each word has a score, from -3 ("unacceptable", "scam") to +3. The
+scores of the words it finds are added up and squashed into -1 to +1.
+
+| Score | Mood |
+| --- | --- |
+| above -0.1 | calm |
+| -0.1 to -0.5 | unhappy |
+| below -0.5 | angry |
+
+- **"not" flips the next word.** "not happy" counts as negative. It looks
+  up to three words back, so "not at all happy" works too.
+- **"very" makes the next word stronger.** "very rude" scores lower than
+  "rude".
+- `SentimentScorer` is abstract, so a smarter scorer could replace this one
+  later.
+
+## How urgent is it?
+
+```python
+from complaints import UrgencyAssessor
+
+urgency = UrgencyAssessor().assess(
+    "Someone hacked my account and sent a wire transfer of {$500.00}. Unacceptable.")
+urgency.priority     # 5
+urgency.reasons      # ['Possible fraud: money may still be at risk (hacked)', 'Customer is angry']
+```
+
+Like A&E at a hospital: a broken arm is seen before a sore throat,
+whatever order they came in. Each complaint gets a priority from 1 (can
+wait) to 5 (deal with it today).
+
+| Rule | Points | Looks for |
+| --- | --- | --- |
+| `FraudRule` | 3 | fraud, scam, hacked, stolen, identity theft |
+| `LockedOutRule` | 2 | frozen, locked out, cannot get, cannot access |
+| `HarassmentRule` | 2 | threatened, harassed, late at night |
+| `RepeatContactRule` | 1 | many times, nobody helps, no update |
+| Angry mood | 1 | a mood score below -0.5 |
+
+Priority is 1 plus the points, capped at 5. Every priority comes with its
+reasons, so a person can see why and disagree.
+
+- Each rule is its own small class with one job. A new kind of emergency is
+  a new class added to the list, and nothing else changes.
+- `PhraseRule` does the work for most rules. They just give it their words
+  and points. Phrases of up to three words are matched, so stop words are
+  kept here, or "locked out" would become just "locked".
+- On the made up sample: 169 complaints are priority 1 and 13 are priority
+  5. Most complaints aren't emergencies, which is what you'd hope.
+
 ## Tests
 
 ```bash
-pytest          # 64 tests
+pytest          # 97 tests
 pytest --cov    # with a coverage report, fails below 95%
 ```
 
