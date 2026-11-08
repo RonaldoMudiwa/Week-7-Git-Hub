@@ -10,9 +10,10 @@ processing (NLP) and a first machine learning model.
 
 ## Status
 
-Day 3 of 7. The complaint model, reading complaint files, cleaning text
-into words, word statistics, a simple keyword classifier with a fair way to
-mark it, a mood score and urgency rules.
+Day 4 of 7. The complaint model, reading complaint files, cleaning text
+into words, word statistics, a mood score, urgency rules, and two
+classifiers compared fairly: a simple keyword one and a machine learning
+one.
 
 ## The idea
 
@@ -242,10 +243,88 @@ reasons, so a person can see why and disagree.
 - On the made up sample: 169 complaints are priority 1 and 13 are priority
   5. Most complaints aren't emergencies, which is what you'd hope.
 
+## The machine learning classifier
+
+```python
+from complaints import KeywordClassifier, MLClassifier, compare, confusion_matrix
+
+scores = compare({"keyword": KeywordClassifier(), "ml": MLClassifier()}, train, test)
+scores["keyword"].accuracy     # 0.915
+scores["ml"].accuracy          # 1.0
+
+ml = MLClassifier().fit(train)
+ml.predict("They charged me twice for one purchase")
+# Prediction(label='Credit card', confidence=0.631)
+ml.top_words("Mortgage", 3)    # [('mortgage payment', 1.737), ('mortgage', 1.737), ('payment', 1.424)]
+```
+
+It works in two steps, joined into a scikit-learn **pipeline**:
+
+1. **TF-IDF** turns each complaint into numbers, one per word. A word
+   scores high if it's used a lot in this complaint but is rare across all
+   of them. "account" is everywhere, so it scores low. "escrow" is rare, so
+   it scores high.
+2. **Logistic regression** learns a weight for every word and product:
+   how much seeing that word should push the guess towards that product.
+   It's like the keyword classifier's cheat sheet, except it works out every
+   weight itself, including negative ones ("this word means it's NOT a
+   mortgage").
+
+Settings, and why:
+
+| Setting | Why |
+| --- | --- |
+| Single words and pairs | "late fee" means more than "late" and "fee" |
+| Our own `TextCleaner` | The same cleaning as the rest of the program |
+| `class_weight="balanced"` | Rare products aren't drowned out by common ones |
+| `strength` (C=5) | Too high and it memorises the training complaints instead of learning, called overfitting |
+
+`top_words` shows what it learned, so it isn't a black box you have to
+trust blindly.
+
+### Keyword vs machine learning
+
+Both were trained on the same 241 complaints and marked on the same 59
+they had never seen.
+
+| | Accuracy | Mortgages right | Bank accounts right |
+| --- | --- | --- | --- |
+| Keyword | 91.5% | 6 of 9 | 6 of 8 |
+| Machine learning | 100% | 9 of 9 | 8 of 8 |
+
+**Be careful with that 100%.** The made up sample is built from a small
+set of phrases, so test complaints look a lot like training ones. Real
+complaints are messier, and the score will be lower. What this does show is
+that the machine learning version beats the simple baseline on the same
+test, which is the point of having a baseline.
+
+### The confusion matrix
+
+One accuracy number hides which mistakes are made. A **confusion matrix**
+shows real products down the side and guesses across the top. Everything
+on the diagonal is right. Here's the keyword classifier's:
+
+```
+real / guess  Checking o Credit car Credit rep Debt colle Money tran   Mortgage
+Checking o             6          0          0          2          0          0
+Credit car             0          9          0          0          0          0
+Credit rep             0          0         12          0          0          0
+Debt colle             0          0          0         12          0          0
+Money tran             0          0          0          0          9          0
+Mortgage               0          0          0          3          0          6
+```
+
+Its mistakes all go one way: 5 complaints wrongly put in "Debt collection".
+
+- **Precision**: of everything it called debt collection, how much really
+  was? 12 of 17, about 71%. Low precision means false alarms.
+- **Recall**: of the real debt collection complaints, how many did it find?
+  12 of 12, 100%. Low recall means it misses things.
+
 ## Tests
 
 ```bash
-pytest          # 97 tests
+pytest          # 112 tests
 pytest --cov    # with a coverage report, fails below 95%
 ```
 

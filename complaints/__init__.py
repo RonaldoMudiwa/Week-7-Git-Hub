@@ -7,8 +7,16 @@ how upset and how urgent they are, and what goes wrong most often.
 """
 
 from .classifier import Classifier, KeywordClassifier, NotTrainedError, Prediction
-from .evaluation import Evaluation, evaluate, train_test_split
+from .evaluation import (
+    ConfusionMatrix,
+    Evaluation,
+    compare,
+    confusion_matrix,
+    evaluate,
+    train_test_split,
+)
 from .exceptions import ComplaintError, DataError, ValidationError
+from .ml import MLClassifier
 from .models import Complaint
 from .sentiment import LEXICON, LexiconSentimentScorer, Mood, Sentiment, SentimentScorer
 from .sources import ComplaintSource, CsvComplaintSource, ListSource, LoadReport, parse_date
@@ -26,7 +34,7 @@ from .urgency import (
     default_rules,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "Complaint",
@@ -48,6 +56,10 @@ __all__ = [
     "train_test_split",
     "evaluate",
     "Evaluation",
+    "ConfusionMatrix",
+    "confusion_matrix",
+    "compare",
+    "MLClassifier",
     "SentimentScorer",
     "LexiconSentimentScorer",
     "Sentiment",
