@@ -6,6 +6,7 @@ how upset and how urgent they are, and what goes wrong most often.
     from complaints import CsvComplaintSource, TextCleaner
 """
 
+from .analyzer import UNKNOWN, AnalysisResult, ComplaintAnalyzer
 from .classifier import Classifier, KeywordClassifier, NotTrainedError, Prediction
 from .evaluation import (
     ConfusionMatrix,
@@ -18,9 +19,11 @@ from .evaluation import (
 from .exceptions import ComplaintError, DataError, ValidationError
 from .ml import MLClassifier
 from .models import Complaint
+from .reports import CsvExport, HtmlReport, ReportBuilder, Summary, TextReport
 from .sentiment import LEXICON, LexiconSentimentScorer, Mood, Sentiment, SentimentScorer
 from .sources import ComplaintSource, CsvComplaintSource, ListSource, LoadReport, parse_date
 from .stats import WordStats, counts_by, top_issues
+from .storage import load_model, save_model
 from .text import STOP_WORDS, TextCleaner, ngrams
 from .urgency import (
     FraudRule,
@@ -34,7 +37,7 @@ from .urgency import (
     default_rules,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "Complaint",
@@ -60,6 +63,16 @@ __all__ = [
     "confusion_matrix",
     "compare",
     "MLClassifier",
+    "ComplaintAnalyzer",
+    "AnalysisResult",
+    "UNKNOWN",
+    "save_model",
+    "load_model",
+    "Summary",
+    "ReportBuilder",
+    "TextReport",
+    "HtmlReport",
+    "CsvExport",
     "SentimentScorer",
     "LexiconSentimentScorer",
     "Sentiment",

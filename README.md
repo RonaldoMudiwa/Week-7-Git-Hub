@@ -10,10 +10,10 @@ processing (NLP) and a first machine learning model.
 
 ## Status
 
-Day 4 of 7. The complaint model, reading complaint files, cleaning text
-into words, word statistics, a mood score, urgency rules, and two
-classifiers compared fairly: a simple keyword one and a machine learning
-one.
+Day 5 of 7. Reading and cleaning complaints, word statistics, a mood
+score, urgency rules, a keyword classifier and a machine learning one
+compared fairly, the analyzer that ties them together, saving trained
+models, and reports as text, CSV and a web page with charts.
 
 ## The idea
 
@@ -321,10 +321,76 @@ Its mistakes all go one way: 5 complaints wrongly put in "Debt collection".
 - **Recall**: of the real debt collection complaints, how many did it find?
   12 of 12, 100%. Low recall means it misses things.
 
+## Putting it together
+
+```python
+from complaints import ComplaintAnalyzer, MLClassifier, Summary, TextReport, HtmlReport, CsvExport
+
+analyzer = ComplaintAnalyzer(MLClassifier().fit(train))
+results = analyzer.analyse_all(complaints)       # most urgent first
+
+summary = Summary.of(results)
+print(TextReport().render(summary))
+HtmlReport().save(summary, "data/report.html")
+CsvExport().save(results, "data/results.csv")    # opens in Excel
+```
+
+`ComplaintAnalyzer` runs the classifier and the urgency check over every
+complaint and sorts them: most urgent first, and with the same priority,
+oldest first, because it's been waiting longest. It's handed a classifier
+rather than making one, so the keyword or the machine learning one can be
+passed in without changing anything.
+
+```
+Complaints analysed: 300
+
+By priority (5 = deal with it today)
+  5  ###                                      13
+  4  ########                                 33
+  3  ########                                 34
+  2  ############                             51
+  1  ######################################## 169
+
+Most urgent
+  [5] 9000068 Money transfer: Someone hacked my account and sent a wire transfer of {$1...
+        - Possible fraud: money may still be at risk (hacked)
+        - Customer has already tried to get help (nobody will listen)
+```
+
+- **`TextReport`** for the terminal, **`HtmlReport`** for a web page with
+  two bar charts drawn by matplotlib, both subclasses of `ReportBuilder`.
+  `Summary` works out the numbers once and both just show them.
+- The charts are saved inside the HTML page as text (base64), so the page
+  is one file that opens offline and can be emailed.
+- Complaint text is escaped in the web page, so a complaint with `<` in it
+  can't break the page.
+- **`CsvExport`** writes one row per complaint with its priority, mood,
+  guessed product and reasons, ready for Excel.
+
+## Saving a trained model
+
+```python
+from complaints import save_model, load_model
+
+save_model(classifier, "data/model.pkl")
+classifier = load_model("data/model.pkl")       # no need to train again
+```
+
+Like saving a game: training on a big file can take minutes, so you save
+the result and carry on next time.
+
+- It's written to a temporary file first and then swapped in, so a crash
+  never leaves half a model.
+- The file is labelled with a format name and version. Opening an old or
+  unrelated file gives a clear error instead of a crash.
+- **Only load model files you made yourself.** Python's pickle can run
+  code hidden inside a file when it's opened, so a model downloaded from a
+  stranger could do anything to your computer.
+
 ## Tests
 
 ```bash
-pytest          # 112 tests
+pytest          # 138 tests
 pytest --cov    # with a coverage report, fails below 95%
 ```
 
