@@ -8,6 +8,7 @@ how upset and how urgent they are, and what goes wrong most often.
 
 from .analyzer import UNKNOWN, AnalysisResult, ComplaintAnalyzer
 from .classifier import Classifier, KeywordClassifier, NotTrainedError, Prediction
+from .download import CfpbDownloader
 from .evaluation import (
     ConfusionMatrix,
     Evaluation,
@@ -37,7 +38,7 @@ from .urgency import (
     default_rules,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "Complaint",
@@ -73,6 +74,7 @@ __all__ = [
     "TextReport",
     "HtmlReport",
     "CsvExport",
+    "CfpbDownloader",
     "SentimentScorer",
     "LexiconSentimentScorer",
     "Sentiment",

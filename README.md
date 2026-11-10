@@ -10,16 +10,58 @@ processing (NLP) and a first machine learning model.
 
 ## Status
 
-Day 5 of 7. Reading and cleaning complaints, word statistics, a mood
+Day 6 of 7. Reading and cleaning complaints, word statistics, a mood
 score, urgency rules, a keyword classifier and a machine learning one
-compared fairly, the analyzer that ties them together, saving trained
-models, and reports as text, CSV and a web page with charts.
+compared fairly, the analyzer, saved models, reports with charts, a
+downloader for the real CFPB data and a command line interface.
 
 ## The idea
 
 A bank can get thousands of complaints a week. Nobody can read them all, so
 this program reads them for you, like a post room sorting letters: what is
 this about, how upset is the customer, does it need someone today?
+
+## Using it
+
+```bash
+python -m complaints demo                          # try some example complaints
+python -m complaints train                         # learn, get a fair score, save the model
+python -m complaints evaluate                      # keyword vs machine learning
+python -m complaints classify My card was charged twice for one purchase
+python -m complaints analyse --html data/report.html --csv data/results.csv
+python -m complaints words --product Mortgage      # a product's clue words
+python -m complaints download --count 2000         # real complaints from the CFPB
+python -m complaints --data data/cfpb_complaints.csv train
+```
+
+```
+"Someone hacked my account and sent a wire transfer of {$900.00} to a stranger. Unacceptable!"
+  Product:  Money transfer (96% sure)
+  Priority: 5 of 5
+  Mood:     angry (-0.56)
+  - Possible fraud: money may still be at risk (hacked)
+  - Customer is angry
+```
+
+| Command | What it does |
+| --- | --- |
+| `demo` | Trains in memory and tries four example complaints |
+| `train [--kind ml\|keyword]` | Marks a classifier fairly on unseen complaints, then retrains on everything and saves it |
+| `evaluate` | Scores both classifiers on the same test, with the confusion matrix, precision and recall |
+| `classify <text>` | Product, priority, mood and reasons for one complaint |
+| `analyse [--top N] [--html file] [--csv file]` | Every complaint, most urgent first, with a report |
+| `words [--product P]` | Most common words and phrases, or one product's clue words |
+| `download [--count N] [--product P] [--out file]` | Real complaints from the CFPB |
+
+`--data` picks another complaints file, `--model-file` another model, and
+`--limit` reads only the first so many complaints.
+
+- Each command is its own small class with a `name`, `help` and `run`,
+  the same pattern as Weeks 4 and 5.
+- Errors, like a missing file or no saved model, print one clear line.
+- `train` marks the classifier on complaints it hasn't seen, so the score
+  is fair. Then it learns again from all of them before saving, so the saved
+  model knows as much as possible.
 
 ## The data
 
@@ -41,6 +83,21 @@ dropped in without changing any code.
 python tools/make_sample_data.py      # makes the same 300 every time
 ```
 
+### Getting the real data
+
+```bash
+python -m complaints download --count 2000
+python -m complaints --data data/cfpb_complaints.csv evaluate
+```
+
+`download` asks the CFPB's free public API (no key needed) for complaints
+that have a narrative, and saves them with the same columns as the sample.
+It couldn't be tested against the real service from where it was written,
+because that network blocks it, so the tests use answers in the shape the
+API sends. Your own computer will be its first real run. If the CFPB ever
+changes the shape of its answers, `download.py` is the only file that would
+need to change.
+
 ## Getting started
 
 ```bash
@@ -49,6 +106,7 @@ python -m venv .venv
 pip install -r requirements.txt
 
 pytest                           # run the tests
+python -m complaints demo        # try it straight away
 ```
 
 Needs Python 3.10 or newer.
@@ -390,7 +448,7 @@ the result and carry on next time.
 ## Tests
 
 ```bash
-pytest          # 138 tests
+pytest          # 168 tests
 pytest --cov    # with a coverage report, fails below 95%
 ```
 

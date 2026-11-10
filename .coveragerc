@@ -2,6 +2,8 @@
 [run]
 source = complaints
 branch = True
+# Only starts the program, so there's nothing to test in it.
+omit = complaints/__main__.py
 
 [report]
 show_missing = True
