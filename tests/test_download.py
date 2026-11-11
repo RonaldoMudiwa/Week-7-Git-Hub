@@ -47,6 +47,11 @@ def test_download_reads_both_answer_shapes(answer):
     assert rows[0]["Complaint ID"] == "123"
 
 
+def test_zero_and_missing_values():
+    rows = CfpbDownloader(FakeFetch([dict(ITEM, complaint_id=0, state=None)])).download(1)
+    assert rows[0]["Complaint ID"] == "0" and rows[0]["State"] == ""
+
+
 def test_saved_file_reads_back_like_the_sample(tmp_path):
     downloader = CfpbDownloader(FakeFetch([ITEM]))
     path = downloader.save(downloader.download(1), tmp_path / "out" / "cfpb.csv")

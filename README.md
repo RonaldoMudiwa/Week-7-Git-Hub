@@ -10,10 +10,11 @@ processing (NLP) and a first machine learning model.
 
 ## Status
 
-Day 6 of 7. Reading and cleaning complaints, word statistics, a mood
-score, urgency rules, a keyword classifier and a machine learning one
-compared fairly, the analyzer, saved models, reports with charts, a
-downloader for the real CFPB data and a command line interface.
+Finished. Reads and cleans complaints, finds the words that matter, scores
+mood and urgency, sorts complaints by product with a keyword classifier
+and a machine learning one compared fairly, and produces reports with
+charts. Includes a downloader for the real CFPB data and a command line.
+175 tests with 100% coverage.
 
 ## The idea
 
@@ -343,7 +344,17 @@ trust blindly.
 ### Keyword vs machine learning
 
 Both were trained on the same 241 complaints and marked on the same 59
-they had never seen.
+they had never seen. Four different shuffles (seeds), so the result isn't
+one lucky split:
+
+| Seed | Keyword | Machine learning |
+| --- | --- | --- |
+| 1 | 100% | 100% |
+| 2 | 98.3% | 100% |
+| 3 | 98.3% | 100% |
+| 7 (the default) | 91.5% | 100% |
+
+The default split in detail:
 
 | | Accuracy | Mortgages right | Bank accounts right |
 | --- | --- | --- | --- |
@@ -445,12 +456,85 @@ the result and carry on next time.
   code hidden inside a file when it's opened, so a model downloaded from a
   stranger could do anything to your computer.
 
+## How it's built
+
+```
+cli.py
+  -> ComplaintSource (abstract)    -> CsvComplaintSource, ListSource
+  -> ComplaintAnalyzer
+       -> Classifier (abstract)    -> KeywordClassifier, MLClassifier
+       -> UrgencyAssessor
+            -> UrgencyRule (abstract) -> PhraseRule -> FraudRule, LockedOutRule, ...
+            -> SentimentScorer (abstract) -> LexiconSentimentScorer
+  -> ReportBuilder (abstract)      -> TextReport, HtmlReport
+  -> CsvExport, save_model / load_model, CfpbDownloader
+```
+
+- **Abstract classes as plugs.** Sources, classifiers, urgency rules,
+  sentiment scorers and reports all have an abstract class saying what they
+  must do. That's how the keyword and machine learning classifiers can be
+  swapped, compared and marked the same way.
+- **Small classes with one job.** Each urgency rule, each report and each
+  command is its own class. A new one is a new class added to a list.
+- **Handed what they need.** `ComplaintAnalyzer` is given a classifier,
+  and `CfpbDownloader` is given a fetch function, instead of making their
+  own. That's what lets the tests hand in fakes and never go online.
+- **Frozen data.** `Complaint`, `Prediction`, `Sentiment` and the results
+  can't change once made, and check their own values.
+
+## Project layout
+
+```
+complaints/
+    models.py        Complaint
+    sources.py       reading CSV files
+    text.py          TextCleaner, stop words and n-grams
+    stats.py         word counts and distinctive words
+    classifier.py    Classifier and KeywordClassifier
+    ml.py            MLClassifier (TF-IDF + logistic regression)
+    evaluation.py    fair splits, accuracy, confusion matrix, compare
+    sentiment.py     mood score
+    urgency.py       urgency rules and priority
+    analyzer.py      ComplaintAnalyzer puts it all together
+    reports.py       text, HTML and CSV reports
+    storage.py       saving and loading models
+    download.py      real complaints from the CFPB
+    cli.py           the commands
+    exceptions.py    the program's own errors
+data/sample_complaints.csv   300 made up complaints
+tools/make_sample_data.py    makes that file
+tests/                       one test file per part, plus end to end tests
+```
+
 ## Tests
 
 ```bash
-pytest          # 168 tests
+pytest          # 175 tests
 pytest --cov    # with a coverage report, fails below 95%
 ```
+
+None of the tests go online. `test_end_to_end.py` runs the whole program
+the way a person would: train, analyse, save the reports, and check the
+most urgent complaint is the same in the text report, the CSV and the web
+page. It also checks a saved model gives exactly the same report as the
+original, and that machine learning beats the keyword baseline on several
+different splits, not just one lucky one. It found a real bug: a complaint
+whose id was the number 0 was being thrown away as if it had no id.
+
+## What I learned this week
+
+- Cleaning text for a computer: tokens, stop words, n-grams
+- Finding the words that matter with a smoothed ratio
+- Why you always build a simple baseline first
+- Marking a model fairly: train and test splits, stratified and seeded
+- TF-IDF and logistic regression with a scikit-learn pipeline
+- Overfitting, and why a 100% score on tidy data needs a warning
+- Confusion matrices, precision and recall
+- Sentiment from a word list, with "not" and "very" handled
+- Rules that explain themselves, so a person can disagree with them
+- Saving a model safely, and why you never load a stranger's pickle file
+- Charts with matplotlib, saved inside a single HTML page
+- Testing code that uses the internet without going online
 
 ## Week plan
 
@@ -462,4 +546,4 @@ pytest --cov    # with a coverage report, fails below 95%
 | 4 | Machine learning classifier, compared with the keyword one |
 | 5 | Saving the trained model, and reports with charts |
 | 6 | Command line interface |
-| 7 | Final tests and README |
+| 7 | End to end tests and README |

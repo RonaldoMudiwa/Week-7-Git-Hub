@@ -83,7 +83,9 @@ class CfpbDownloader:
 
     @staticmethod
     def _to_row(item: dict[str, Any]) -> dict[str, str] | None:
-        row = {column: str(item.get(field) or "").strip() for field, column in API_FIELDS.items()}
+        # "is None" rather than "or", so a value like 0 isn't mistaken for missing.
+        row = {column: "" if item.get(field) is None else str(item[field]).strip()
+               for field, column in API_FIELDS.items()}
         return row if row["Consumer complaint narrative"] else None
 
 
